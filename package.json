@@ -9,6 +9,7 @@
     "dev": "concurrently -n server,client -c teal,blue \"npm run dev -w server\" \"npm run dev -w client\"",
     "test": "npm run test -w server",
     "build": "npm run build -w server && npm run build -w client",
+    "vercel-build": "npm run build -w client && node -e \"const fs=require('fs'); fs.rmSync('dist',{recursive:true,force:true}); fs.cpSync('client/dist','dist',{recursive:true}); console.log('Vercel output:', fs.readdirSync('dist').join(', '));\"",
     "start": "npm run start -w server"
   },
   "devDependencies": {

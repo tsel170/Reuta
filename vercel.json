@@ -1,5 +1,6 @@
 {
-  "buildCommand": "npm run build -w client && rm -rf dist && cp -R client/dist dist",
+  "framework": null,
+  "buildCommand": "npm run vercel-build",
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "rewrites": [
