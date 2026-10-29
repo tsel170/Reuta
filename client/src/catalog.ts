@@ -31,7 +31,6 @@ export const catalog: StoreCatalog = {
     timezone: "Asia/Jerusalem",
     tagline: "בגדים באהבה",
     logoUrl: `${import.meta.env.BASE_URL}reuota-poster.jpg`,
-    whatsappInviteUrl: import.meta.env.VITE_WHATSAPP_INVITE_URL?.trim() || undefined,
     isDemoData: false,
   },
   regularHours: [

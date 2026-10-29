@@ -21,8 +21,26 @@ async function withFallback<T>(path: string, fallback: () => T): Promise<T> {
   }
 }
 
+async function serverWhatsAppUrl(): Promise<string | null> {
+  try {
+    const data = await request<{ whatsappInviteUrl: string | null }>("/api/config");
+    return data.whatsappInviteUrl;
+  } catch {
+    return null;
+  }
+}
+
 export const api = {
   schedule: () => withFallback<ScheduleResponse>("/api/schedule", localSchedule),
   store: () => withFallback<StoreSettings>("/api/store", () => localSchedule().store),
-  messages: () => withFallback<MessagesResponse>("/api/messages", localMessages),
+  messages: async () => {
+    const [data, invite] = await Promise.all([
+      withFallback<MessagesResponse>("/api/messages", localMessages),
+      serverWhatsAppUrl(),
+    ]);
+    return {
+      ...data,
+      whatsappInviteUrl: invite ?? data.whatsappInviteUrl,
+    };
+  },
 };
