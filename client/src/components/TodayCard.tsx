@@ -17,13 +17,7 @@ export function TodayCard({ today, onOpenEvent, onCountdownElapsed }: Props) {
         {today.weekdayName} · {formatDateLabel(today.date)}
       </p>
       <h2 className="hero-status">{today.statusLabel}</h2>
-      {today.hoursPublished ? (
-        <p className="hero-hours">
-          {today.isClosed ? "סגור היום" : formatWindows(today.effectiveWindows)}
-        </p>
-      ) : (
-        <p className="hero-hours muted">אין עדיין מידע על שעות הפתיחה להיום.</p>
-      )}
+      <TodayHours today={today} />
       {today.countdown ? (
         <Countdown countdown={today.countdown} onElapsed={onCountdownElapsed} />
       ) : null}
@@ -43,6 +37,23 @@ export function TodayCard({ today, onOpenEvent, onCountdownElapsed }: Props) {
         </div>
       ) : null}
     </section>
+  );
+}
+
+function TodayHours({ today }: { today: TodayView }) {
+  if (!today.hoursPublished) {
+    return <p className="hero-hours muted">אין עדיין מידע על שעות הפתיחה להיום.</p>;
+  }
+
+  if (today.isClosed || !today.effectiveWindows?.length) {
+    return <p className="hero-hours">סגור היום</p>;
+  }
+
+  return (
+    <div className="hero-hours-block">
+      <p className="hero-hours-label">שעות הפתיחה היום</p>
+      <p className="hero-hours">{formatWindows(today.effectiveWindows)}</p>
+    </div>
   );
 }
 

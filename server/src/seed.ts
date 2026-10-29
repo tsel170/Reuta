@@ -16,7 +16,6 @@ export async function seedInitialStore(now = new Date()): Promise<StoreData> {
   const repository = await getRepository();
   const timezone = config.storeTimezone;
   const today = getZonedNow(timezone, now).date;
-  const tomorrow = addDays(today, 1);
   const inThreeDays = addDays(today, 3);
 
   const regularHours: RegularOpeningHours[] = [
@@ -33,14 +32,6 @@ export async function seedInitialStore(now = new Date()): Promise<StoreData> {
   ];
 
   const overrides: DailyScheduleOverride[] = [
-    {
-      id: randomUUID(),
-      startDate: tomorrow,
-      endDate: tomorrow,
-      isClosed: false,
-      windows: [{ open: "10:00", close: "13:00" }],
-      reason: "פתיחה מיוחדת",
-    },
     {
       id: randomUUID(),
       startDate: inThreeDays,
@@ -96,18 +87,6 @@ export async function seedInitialStore(now = new Date()): Promise<StoreData> {
       receivedAt: new Date(`${today}T09:40:03+03:00`).toISOString(),
       publicationStatus: "approved",
       messageKind: "event",
-    },
-    {
-      id: randomUUID(),
-      source: "manual",
-      sourceMessageId: "demo-3",
-      senderName: "רעותה",
-      isFromStaff: true,
-      body: "מחר תהיה פתיחה מיוחדת בבוקר, מ-10:00 עד 13:00.",
-      sentAt: new Date(`${today}T11:05:00+03:00`).toISOString(),
-      receivedAt: new Date(`${today}T11:05:02+03:00`).toISOString(),
-      publicationStatus: "approved",
-      messageKind: "hours",
     },
   ];
 

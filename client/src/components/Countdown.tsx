@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import type { CountdownInfo } from "../types";
 
 type Props = {
@@ -6,13 +6,20 @@ type Props = {
   onElapsed?: () => void;
 };
 
-function partsFrom(ms: number) {
+type TimeParts = {
+  days: number;
+  hours: number;
+  minutes: number;
+  seconds: number;
+};
+
+function partsFrom(ms: number): TimeParts {
   const total = Math.max(0, Math.floor(ms / 1000));
   return {
-    hours: Math.floor(total / 3600),
+    days: Math.floor(total / 86400),
+    hours: Math.floor((total % 86400) / 3600),
     minutes: Math.floor((total % 3600) / 60),
     seconds: total % 60,
-    done: total <= 0,
   };
 }
 
@@ -40,21 +47,28 @@ export function Countdown({ countdown, onElapsed }: Props) {
     onElapsed?.();
   }, [remaining, countdown.targetIso, onElapsed]);
 
-  const { hours, minutes, seconds } = partsFrom(remaining);
+  const parts = partsFrom(remaining);
+  const blocks = [
+    parts.days > 0 ? { key: "days", value: String(parts.days), label: "ימים" } : null,
+    parts.hours > 0 ? { key: "hours", value: pad(parts.hours), label: "שעות" } : null,
+    { key: "minutes", value: pad(parts.minutes), label: "דקות" },
+    { key: "seconds", value: pad(parts.seconds), label: "שניות" },
+  ].filter((block): block is { key: string; value: string; label: string } => block !== null);
 
   return (
     <div className="countdown" aria-live="polite">
       <p className="countdown-caption">{countdown.caption}</p>
       <div className="countdown-grid" dir="ltr">
-        <TimeBlock value={pad(hours)} label="שעות" />
-        <span className="countdown-sep" aria-hidden="true">
-          :
-        </span>
-        <TimeBlock value={pad(minutes)} label="דקות" />
-        <span className="countdown-sep" aria-hidden="true">
-          :
-        </span>
-        <TimeBlock value={pad(seconds)} label="שניות" />
+        {blocks.map((block, index) => (
+          <Fragment key={block.key}>
+            {index > 0 ? (
+              <span className="countdown-sep" aria-hidden="true">
+                :
+              </span>
+            ) : null}
+            <TimeBlock value={block.value} label={block.label} />
+          </Fragment>
+        ))}
       </div>
     </div>
   );
