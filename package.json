@@ -1,0 +1,17 @@
+{
+  "name": "secondhend",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,client -c teal,blue \"npm run dev -w server\" \"npm run dev -w client\"",
+    "test": "npm run test -w server",
+    "build": "npm run build -w server && npm run build -w client",
+    "start": "npm run start -w server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
