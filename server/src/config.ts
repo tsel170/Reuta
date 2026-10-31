@@ -23,6 +23,7 @@ export const config = {
   smtpUser: process.env.SMTP_USER?.trim() ?? "",
   smtpPass: process.env.SMTP_PASS?.trim() ?? "",
   smtpFrom: process.env.SMTP_FROM?.trim() || process.env.SMTP_USER?.trim() || "reuota@localhost",
+  resendApiKey: process.env.RESEND_API_KEY?.trim() ?? "",
   dataFile: process.env.DATA_FILE
     ? path.resolve(process.env.DATA_FILE)
     : path.resolve(here, "../data/store.json"),
