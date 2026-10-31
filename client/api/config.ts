@@ -1,8 +1,5 @@
-const INVITE = /^https:\/\/(chat\.whatsapp\.com|wa\.me)\//i;
+import { handleApi } from "../../vercel-api-proxy";
 
-export function GET() {
-  const url = process.env.WHATSAPP_INVITE_URL?.trim() ?? "";
-  return Response.json({
-    whatsappInviteUrl: INVITE.test(url) ? url : null,
-  });
+export function GET(request: Request) {
+  return handleApi(request);
 }
