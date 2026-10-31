@@ -4,25 +4,32 @@ function renderBase(): string {
   return (process.env.API_URL ?? "").trim().replace(/\/$/, "");
 }
 
-function localWhatsAppResponse(): Response {
-  const url = process.env.WHATSAPP_INVITE_URL?.trim() ?? "";
-  return Response.json({
-    whatsappInviteUrl: INVITE.test(url) ? url : null,
-  });
+function resolvePath(request: Request): { pathname: string; search: string } {
+  const incoming = new URL(request.url);
+  const rewritten = incoming.searchParams.get("path");
+  if (rewritten) {
+    incoming.searchParams.delete("path");
+    const pathname = rewritten.startsWith("/") ? rewritten : `/api/${rewritten}`;
+    return { pathname, search: incoming.search };
+  }
+  return { pathname: incoming.pathname, search: incoming.search };
 }
 
 export async function handleApi(request: Request): Promise<Response> {
-  const incoming = new URL(request.url);
+  const { pathname, search } = resolvePath(request);
   const base = renderBase();
 
   if (!base) {
-    if (incoming.pathname === "/api/config") {
-      return localWhatsAppResponse();
+    if (pathname === "/api/config") {
+      const url = process.env.WHATSAPP_INVITE_URL?.trim() ?? "";
+      return Response.json({
+        whatsappInviteUrl: INVITE.test(url) ? url : null,
+      });
     }
     return Response.json({ error: "API_URL is not configured" }, { status: 503 });
   }
 
-  const target = `${base}${incoming.pathname}${incoming.search}`;
+  const target = `${base}${pathname}${search}`;
   const headers = new Headers();
   request.headers.forEach((value, key) => {
     const name = key.toLowerCase();
@@ -51,3 +58,10 @@ export async function handleApi(request: Request): Promise<Response> {
     headers: responseHeaders,
   });
 }
+
+export const GET = handleApi;
+export const POST = handleApi;
+export const PUT = handleApi;
+export const PATCH = handleApi;
+export const DELETE = handleApi;
+export const OPTIONS = handleApi;
