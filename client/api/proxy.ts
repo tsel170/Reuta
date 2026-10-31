@@ -15,6 +15,8 @@ function resolvePath(request: Request): { pathname: string; search: string } {
   return { pathname: incoming.pathname, search: incoming.search };
 }
 
+export const config = { maxDuration: 30 };
+
 export async function handleApi(request: Request): Promise<Response> {
   const { pathname, search } = resolvePath(request);
   const base = renderBase();
@@ -33,30 +35,43 @@ export async function handleApi(request: Request): Promise<Response> {
   const headers = new Headers();
   request.headers.forEach((value, key) => {
     const name = key.toLowerCase();
-    if (name === "host" || name === "connection" || name === "content-length") return;
+    if (
+      name === "host" ||
+      name === "connection" ||
+      name === "content-length" ||
+      name === "accept-encoding" ||
+      name === "content-encoding"
+    ) {
+      return;
+    }
     headers.set(key, value);
   });
 
-  const init: RequestInit = {
-    method: request.method,
-    headers,
-    redirect: "manual",
-  };
-  if (request.method !== "GET" && request.method !== "HEAD") {
-    init.body = await request.arrayBuffer();
+  try {
+    const init: RequestInit = {
+      method: request.method,
+      headers,
+      redirect: "manual",
+    };
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      init.body = await request.arrayBuffer();
+    }
+
+    const upstream = await fetch(target, init);
+    const responseHeaders = new Headers();
+    upstream.headers.forEach((value, key) => {
+      if (key.toLowerCase() === "transfer-encoding") return;
+      responseHeaders.append(key, value);
+    });
+
+    return new Response(upstream.body, {
+      status: upstream.status,
+      headers: responseHeaders,
+    });
+  } catch (error) {
+    console.error("API proxy failed", target, error);
+    return Response.json({ error: "השרת ב-Render לא זמין כרגע. נסו שוב בעוד כמה שניות." }, { status: 502 });
   }
-
-  const upstream = await fetch(target, init);
-  const responseHeaders = new Headers();
-  upstream.headers.forEach((value, key) => {
-    if (key.toLowerCase() === "transfer-encoding") return;
-    responseHeaders.append(key, value);
-  });
-
-  return new Response(upstream.body, {
-    status: upstream.status,
-    headers: responseHeaders,
-  });
 }
 
 export const GET = handleApi;
