@@ -2,8 +2,12 @@ import express from "express";
 import cors from "cors";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { getAdminStore } from "./admin/store.js";
 import { config, isProduction } from "./config.js";
+import { AdminHttpError } from "./services/adminSchedule.js";
 import { getRepository } from "./db/index.js";
+import { adminRouter } from "./routes/admin.js";
+import { adminAuthRouter } from "./routes/adminAuth.js";
 import { ingestRouter } from "./routes/ingest.js";
 import { publicRouter } from "./routes/public.js";
 import { seedInitialStore } from "./seed.js";
@@ -12,17 +16,26 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 
 async function main() {
   const repository = await getRepository();
+  const adminStore = await getAdminStore();
   await seedInitialStore();
   if (config.whatsappInviteUrl) {
     await repository.updateSettings({ whatsappInviteUrl: config.whatsappInviteUrl });
   }
 
   const app = express();
-  app.use(cors());
-  app.use(express.json({ limit: "1mb" }));
+  app.set("trust proxy", 1);
+  app.use(
+    cors({
+      origin: true,
+      credentials: true,
+    }),
+  );
+  app.use(express.json({ limit: "12mb" }));
 
   app.use("/api", publicRouter(repository));
   app.use("/api/ingest", ingestRouter(repository));
+  app.use("/api/admin/auth", adminAuthRouter(adminStore));
+  app.use("/api/admin", adminRouter(repository, adminStore));
 
   if (isProduction) {
     const clientDir = path.resolve(here, "../../client/dist");
@@ -43,8 +56,14 @@ async function main() {
       res: express.Response,
       _next: express.NextFunction,
     ) => {
-      console.error(error);
-      res.status(500).json({ error: "שגיאת שרת פנימית" });
+      const status =
+        error instanceof AdminHttpError
+          ? error.status
+          : ((error as { statusCode?: number }).statusCode ?? 500);
+      if (status >= 500) console.error(error);
+      res.status(status).json({
+        error: status >= 500 ? "שגיאת שרת פנימית" : error.message,
+      });
     },
   );
 

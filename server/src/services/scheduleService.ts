@@ -54,8 +54,7 @@ export function resolveDay(
 ): DayScheduleView {
   const weekday = weekdayFromDate(date);
   const regular = regularHours.find((item) => item.weekday === weekday) ?? null;
-  const override =
-    overrides.find((item) => dateInRange(date, item.startDate, item.endDate)) ?? null;
+  const override = pickOverride(date, overrides);
 
   let effectiveWindows: TimeWindow[] | null = null;
   let isClosed = false;
@@ -208,6 +207,51 @@ function formatNextOpen(next: NextOpening, todayDate: string): string {
   if (next.date === todayDate) return `בשעה ${next.time}`;
   if (next.date === addDays(todayDate, 1)) return `מחר בשעה ${next.time}`;
   return `ב${next.weekdayName} בשעה ${next.time}`;
+}
+
+export function pickOverride(
+  date: string,
+  overrides: DailyScheduleOverride[],
+): DailyScheduleOverride | null {
+  const matching = overrides.filter((item) => dateInRange(date, item.startDate, item.endDate));
+  matching.sort((a, b) => {
+    const spanA = dateSpan(a.startDate, a.endDate);
+    const spanB = dateSpan(b.startDate, b.endDate);
+    return spanA - spanB;
+  });
+  return matching[0] ?? null;
+}
+
+function dateSpan(startDate: string, endDate: string): number {
+  const start = Date.parse(`${startDate}T00:00:00Z`);
+  const end = Date.parse(`${endDate}T00:00:00Z`);
+  return Math.max(0, Math.round((end - start) / 86_400_000)) + 1;
+}
+
+export async function getMonthSchedule(
+  repository: StoreRepository,
+  year: number,
+  month: number,
+  now = new Date(),
+) {
+  const [settings, regularHours, overrides, events] = await Promise.all([
+    repository.getSettings(),
+    repository.getRegularHours(),
+    repository.getOverrides(),
+    repository.getEvents(),
+  ]);
+  const zoned = getZonedNow(settings.timezone || "Asia/Jerusalem", now);
+  const start = `${year}-${String(month).padStart(2, "0")}-01`;
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const days = Array.from({ length: daysInMonth }, (_, index) =>
+    resolveDay(addDays(start, index), regularHours, overrides, events, zoned.date),
+  );
+  return {
+    month: `${year}-${String(month).padStart(2, "0")}`,
+    generatedAt: zoned.iso,
+    store: settings,
+    days,
+  };
 }
 
 export async function getSchedule(

@@ -30,12 +30,12 @@ export function EventDialog({ event, onClose }: Props) {
         <>
           <header>
             <div>
-              <p className="muted">{TYPE_LABELS[event.type]}</p>
+              <p className={`event-type-label type-${event.type}`}>{TYPE_LABELS[event.type]}</p>
               <h2 id="event-title">{event.title}</h2>
             </div>
             <button
               ref={closeRef}
-              className="icon-button"
+              className="icon-button is-close"
               type="button"
               onClick={close}
               aria-label="סגירת החלונית"
@@ -48,7 +48,6 @@ export function EventDialog({ event, onClose }: Props) {
             <strong>תאריכים: </strong>
             {formatDateRange(event.startDate, event.endDate)}
           </p>
-          <p className="muted">האירוע אינו משנה אוטומטית את שעות הפתיחה.</p>
         </>
       )}
     </Popup>

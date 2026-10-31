@@ -5,9 +5,10 @@ import { EventChip } from "./EventChip";
 type Props = {
   week: DayScheduleView[];
   onOpenEvent: (event: StoreEvent) => void;
+  onSelectDay?: (day: DayScheduleView) => void;
 };
 
-export function WeekList({ week, onOpenEvent }: Props) {
+export function WeekList({ week, onOpenEvent, onSelectDay }: Props) {
   return (
     <section className="week-panel" aria-label="שעות הפתיחה הקרובות">
       <div className="week-heading">
@@ -15,7 +16,11 @@ export function WeekList({ week, onOpenEvent }: Props) {
       </div>
       <div className="week-list">
         {week.map((day) => (
-          <article key={day.date} className="day-row">
+          <article
+            key={day.date}
+            className={`day-row ${dayTone(day)}${onSelectDay ? " is-editable" : ""}`}
+            onClick={onSelectDay ? () => onSelectDay(day) : undefined}
+          >
             <div className="day-main">
               <div className="day-name">
                 <h3>{day.weekdayName}</h3>
@@ -29,9 +34,9 @@ export function WeekList({ week, onOpenEvent }: Props) {
               <DayHours day={day} />
             </div>
             {day.events.length ? (
-              <div className="event-row">
-                {day.events.map((event) => (
-                  <EventChip key={event.id} event={event} onOpen={onOpenEvent} />
+              <div className="event-row" onClick={(event) => event.stopPropagation()}>
+                {day.events.map((item) => (
+                  <EventChip key={item.id} event={item} onOpen={onOpenEvent} />
                 ))}
               </div>
             ) : null}
@@ -71,6 +76,13 @@ function DayHours({ day }: { day: DayScheduleView }) {
   }
 
   return <p className="day-hours">{formatWindows(day.effectiveWindows)}</p>;
+}
+
+function dayTone(day: DayScheduleView): string {
+  if (!day.hoursPublished) return "is-unpublished";
+  if (day.hasTemporaryChange) return day.isClosed ? "is-changed is-closed" : "is-changed";
+  if (day.isClosed) return "is-closed";
+  return "is-open";
 }
 
 function isWeekend(weekday: number): boolean {

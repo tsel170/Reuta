@@ -114,6 +114,21 @@ export class FileRepository implements StoreRepository {
     return event;
   }
 
+  async updateEvent(id: string, patch: Partial<StoreEvent>): Promise<StoreEvent> {
+    await this.ready();
+    const index = this.data.events.findIndex((event) => event.id === id);
+    if (index < 0) throw new Error("האירוע לא נמצא");
+    this.data.events[index] = { ...this.data.events[index], ...patch, id };
+    await this.persist();
+    return this.data.events[index];
+  }
+
+  async removeEvent(id: string): Promise<void> {
+    await this.ready();
+    this.data.events = this.data.events.filter((event) => event.id !== id);
+    await this.persist();
+  }
+
   async getMessages(query?: MessageQuery): Promise<ArchivedMessage[]> {
     await this.ready();
     return this.data.messages
@@ -149,6 +164,12 @@ export class FileRepository implements StoreRepository {
     this.data.messages[index] = { ...this.data.messages[index], ...patch, id };
     await this.persist();
     return this.data.messages[index];
+  }
+
+  async removeMessage(id: string): Promise<void> {
+    await this.ready();
+    this.data.messages = this.data.messages.filter((message) => message.id !== id);
+    await this.persist();
   }
 
   private async persist(): Promise<void> {

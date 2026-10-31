@@ -12,8 +12,20 @@ import type {
   WeekdayIndex,
 } from "./types.js";
 
-export async function seedInitialStore(now = new Date()): Promise<StoreData> {
+export async function seedInitialStore(
+  now = new Date(),
+  options: { force?: boolean } = {},
+): Promise<StoreData> {
   const repository = await getRepository();
+  if (!options.force && !(await repository.isEmpty())) {
+    return {
+      settings: await repository.getSettings(),
+      regularHours: await repository.getRegularHours(),
+      overrides: await repository.getOverrides(),
+      events: await repository.getEvents(),
+      messages: await repository.getMessages(),
+    };
+  }
   const timezone = config.storeTimezone;
   const today = getZonedNow(timezone, now).date;
   const inThreeDays = addDays(today, 3);
@@ -120,7 +132,7 @@ function hours(weekday: WeekdayIndex, windows: TimeWindow[]): RegularOpeningHour
 }
 
 if (process.argv[1]?.includes("seed.ts")) {
-  seedInitialStore()
+  seedInitialStore(new Date(), { force: true })
     .then(() => {
       console.log("נתוני החנות הראשוניים נשמרו.");
       process.exit(0);

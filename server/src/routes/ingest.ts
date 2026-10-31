@@ -52,7 +52,7 @@ export function ingestRouter(repository: StoreRepository): Router {
 
   router.post("/seed", async (_req, res, next) => {
     try {
-      const data = await seedInitialStore();
+      const data = await seedInitialStore(new Date(), { force: true });
       res.json({ ok: true, isDemoData: data.settings.isDemoData });
     } catch (error) {
       next(error);

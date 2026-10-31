@@ -12,6 +12,12 @@ function resolveWhatsAppUrl(stored?: string): string | null {
 export function publicRouter(repository: StoreRepository): Router {
   const router = Router();
 
+  router.get("/config", (_req, res) => {
+    res.json({
+      whatsappInviteUrl: resolveWhatsAppUrl(),
+    });
+  });
+
   router.get("/health", async (_req, res) => {
     res.json({
       ok: true,
@@ -55,6 +61,8 @@ export function publicRouter(repository: StoreRepository): Router {
           sentAt: message.sentAt,
           source: message.source,
           messageKind: message.messageKind,
+          photos: message.photos ?? [],
+          editedAt: message.editedAt,
         })),
       });
     } catch (error) {

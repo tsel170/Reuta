@@ -119,4 +119,76 @@ describe("קליטת הודעות", () => {
     assert.equal(repository.data.overrides.length, 0);
     assert.equal(result.message.publicationStatus, "pending");
   });
+
+  it("עריכת הודעה מחליפה את השינוי שנוצר ממנה", async () => {
+    const repository = new MemoryRepository({
+      settings: { id: "store", name: "בדיקה", timezone: "Asia/Jerusalem", isDemoData: true },
+      regularHours: [regularDay(2)],
+    });
+    const service = new MessageIngestionService(repository);
+    const created = await service.ingest(
+      {
+        senderName: "מנהלת",
+        body: "היום פתוחים מ-16:00 עד 20:00",
+        publicationStatus: "approved",
+      },
+      new Date("2026-10-28T12:00:00+02:00"),
+    );
+    assert.equal(created.message.extracted?.applied, true);
+    assert.equal(repository.data.overrides[0]?.windows[0]?.close, "20:00");
+
+    const updated = await service.update(
+      created.message.id,
+      { body: "היום החנות סגורה" },
+      new Date("2026-10-28T12:05:00+02:00"),
+    );
+    assert.equal(updated.extracted?.applied, false);
+    assert.equal(repository.data.overrides.length, 0);
+
+    const applied = await service.applyReviewed(updated.id, {
+      hours: { startDate: "2026-10-28", isClosed: true },
+    });
+    assert.equal(applied.extracted?.applied, true);
+    assert.equal(repository.data.overrides.length, 1);
+    assert.equal(repository.data.overrides[0]?.isClosed, true);
+  });
+
+  it("שליחת הודעת מנהל לא מחילה שינוי בלי אישור", async () => {
+    const repository = new MemoryRepository({
+      settings: { id: "store", name: "בדיקה", timezone: "Asia/Jerusalem", isDemoData: true },
+      regularHours: [regularDay(2)],
+    });
+    const service = new MessageIngestionService(repository);
+    const result = await service.ingest(
+      {
+        senderName: "מנהלת",
+        body: "היום פתוחים מ-16:00 עד 20:00",
+        publicationStatus: "approved",
+        apply: false,
+      },
+      new Date("2026-10-28T12:00:00+02:00"),
+    );
+    assert.equal(result.message.extracted?.applied, false);
+    assert.equal(repository.data.overrides.length, 0);
+    assert.equal(result.message.extracted?.kind, "temporary_hours");
+  });
+
+  it("מחיקת הודעה מבטלת את השינוי שנוצר ממנה", async () => {
+    const repository = new MemoryRepository({
+      settings: { id: "store", name: "בדיקה", timezone: "Asia/Jerusalem", isDemoData: true },
+      regularHours: [regularDay(2)],
+    });
+    const service = new MessageIngestionService(repository);
+    const created = await service.ingest(
+      {
+        senderName: "מנהלת",
+        body: "היום פתוחים מ-16:00 עד 20:00",
+        publicationStatus: "approved",
+      },
+      new Date("2026-10-28T12:00:00+02:00"),
+    );
+    await service.remove(created.message.id);
+    assert.equal(repository.data.messages.length, 0);
+    assert.equal(repository.data.overrides.length, 0);
+  });
 });

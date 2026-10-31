@@ -7,11 +7,16 @@ type Props = {
   today: TodayView;
   onOpenEvent: (event: StoreEvent) => void;
   onCountdownElapsed: () => void;
+  onSelectDay?: (day: TodayView) => void;
 };
 
-export function TodayCard({ today, onOpenEvent, onCountdownElapsed }: Props) {
+export function TodayCard({ today, onOpenEvent, onCountdownElapsed, onSelectDay }: Props) {
   return (
-    <section className={`hero ${today.status}`} aria-live="polite">
+    <section
+      className={`hero ${today.status}${onSelectDay ? " is-editable" : ""}`}
+      aria-live="polite"
+      onClick={onSelectDay ? () => onSelectDay(today) : undefined}
+    >
       <p className="hero-kicker">
         <span className={`live-dot ${today.status}`} />
         {today.weekdayName} · {formatDateLabel(today.date)}
@@ -19,7 +24,9 @@ export function TodayCard({ today, onOpenEvent, onCountdownElapsed }: Props) {
       <h2 className="hero-status">{today.statusLabel}</h2>
       <TodayHours today={today} />
       {today.countdown ? (
-        <Countdown countdown={today.countdown} onElapsed={onCountdownElapsed} />
+        <div onClick={(event) => event.stopPropagation()}>
+          <Countdown countdown={today.countdown} onElapsed={onCountdownElapsed} />
+        </div>
       ) : null}
       {today.hasTemporaryChange ? (
         <div className="hero-note">
@@ -30,9 +37,9 @@ export function TodayCard({ today, onOpenEvent, onCountdownElapsed }: Props) {
         </div>
       ) : null}
       {today.events.length ? (
-        <div className="event-row">
-          {today.events.map((event) => (
-            <EventChip key={event.id} event={event} onOpen={onOpenEvent} />
+        <div className="event-row" onClick={(event) => event.stopPropagation()}>
+          {today.events.map((item) => (
+            <EventChip key={item.id} event={item} onOpen={onOpenEvent} />
           ))}
         </div>
       ) : null}

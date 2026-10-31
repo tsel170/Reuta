@@ -98,14 +98,30 @@ export type ScheduleResponse = {
   notices: StoreEvent[];
 };
 
+export type MessageExtracted = {
+  confidence: "high" | "medium" | "low";
+  kind: "regular_hours" | "temporary_hours" | "event" | "unclear";
+  dates: string[];
+  isClosed?: boolean;
+  windows?: TimeWindow[];
+  eventType?: StoreEvent["type"];
+  eventTitle?: string;
+  notes: string[];
+  applied: boolean;
+  blockedReason?: string;
+};
+
 export type PublicMessage = {
   id: string;
   senderName: string;
   isFromStaff: boolean;
   body: string;
+  photos?: string[];
   sentAt: string;
+  editedAt?: string;
   source: "manual" | "whatsapp" | "seed";
   messageKind: "hours" | "event" | "general" | "unclear";
+  extracted?: MessageExtracted;
 };
 
 export type MessagesResponse = {

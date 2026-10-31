@@ -17,7 +17,7 @@ type Props = {
 export function EventChip({ event, onOpen }: Props) {
   const Icon = ICONS[event.type];
   return (
-    <button className="event-chip" type="button" onClick={() => onOpen(event)}>
+    <button className={`event-chip type-${event.type}`} type="button" onClick={() => onOpen(event)}>
       <Icon size={16} aria-hidden="true" />
       <span>{event.title}</span>
     </button>

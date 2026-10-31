@@ -2,9 +2,9 @@ import { ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
+import { MessageBubble } from "../components/MessageBubble";
 import { LoadingState, MessageState } from "../components/StateViews";
 import { WhatsAppButton } from "../components/WhatsAppButton";
-import { formatDateTime } from "../format";
 import type { MessagesResponse } from "../types";
 
 export function MessagesPage() {
@@ -24,7 +24,7 @@ export function MessagesPage() {
   }, []);
 
   return (
-    <main className="messages-page">
+    <main className="messages-page is-fixed-shell">
       <header className="messages-toolbar">
         <Link className="button ghost" to="/">
           <ArrowRight size={18} aria-hidden="true" />
@@ -32,7 +32,7 @@ export function MessagesPage() {
         </Link>
         <div>
           <strong>הודעות ועדכונים</strong>
-          <p className="muted">ארכיון עדכונים מהחנות</p>
+          <p className="muted">ארכיון ההודעות הציבורי</p>
         </div>
       </header>
 
@@ -53,15 +53,7 @@ export function MessagesPage() {
           />
         ) : null}
         {data?.messages.map((message) => (
-          <article
-            key={message.id}
-            className={`bubble ${message.isFromStaff ? "staff" : ""}`}
-          >
-            <small>
-              {message.senderName} · {formatDateTime(message.sentAt)}
-            </small>
-            <p>{message.body}</p>
-          </article>
+          <MessageBubble key={message.id} message={message} />
         ))}
       </section>
 

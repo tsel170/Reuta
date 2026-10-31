@@ -59,7 +59,7 @@ export function HomePage() {
               <p>{data.store.tagline || "שעות פתיחה ועדכונים"}</p>
             </div>
           </div>
-          <Link className="button ghost header-action" to="/messages">
+          <Link className="button ghost header-action" to="/chat">
             <MessageCircle size={18} aria-hidden="true" />
             הודעות ועדכונים
           </Link>

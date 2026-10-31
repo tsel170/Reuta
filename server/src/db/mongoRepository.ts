@@ -131,12 +131,26 @@ export class MongoRepository implements StoreRepository {
 
   async upsertOverride(override: DailyScheduleOverride): Promise<DailyScheduleOverride> {
     await this.ready();
-    const doc = await DailyScheduleOverrideModel.findByIdAndUpdate(
-      override.id,
-      override,
-      { new: true, upsert: true, setDefaultsOnInsert: true },
-    );
-    return { ...override, id: String(doc!._id) };
+    const payload = {
+      startDate: override.startDate,
+      endDate: override.endDate,
+      isClosed: override.isClosed,
+      windows: override.windows,
+      reason: override.reason,
+      sourceMessageId: override.sourceMessageId,
+    };
+    const doc = isMongoId(override.id)
+      ? await DailyScheduleOverrideModel.findByIdAndUpdate(override.id, payload, {
+          new: true,
+          upsert: true,
+          setDefaultsOnInsert: true,
+        })
+      : await DailyScheduleOverrideModel.findOneAndUpdate(
+          { startDate: override.startDate, endDate: override.endDate },
+          payload,
+          { new: true, upsert: true, setDefaultsOnInsert: true },
+        );
+    return { ...payload, id: String(doc!._id) };
   }
 
   async removeOverride(id: string): Promise<void> {
@@ -170,6 +184,30 @@ export class MongoRepository implements StoreRepository {
     return { ...event, id: String(doc._id) };
   }
 
+  async updateEvent(id: string, patch: Partial<StoreEvent>): Promise<StoreEvent> {
+    await this.ready();
+    const doc = await StoreEventModel.findByIdAndUpdate(id, { $set: patch }, { new: true });
+    if (!doc) throw new Error("האירוע לא נמצא");
+    const value = doc.toObject();
+    return {
+      id: String(value._id),
+      title: value.title,
+      description: value.description,
+      type: value.type as StoreEvent["type"],
+      importance: (value.importance as StoreEvent["importance"]) ?? "normal",
+      startDate: value.startDate,
+      endDate: value.endDate ?? undefined,
+      weekdays: (value.weekdays ?? []) as WeekdayIndex[],
+      sourceMessageId: value.sourceMessageId ?? undefined,
+      isGeneralNotice: value.isGeneralNotice,
+    };
+  }
+
+  async removeEvent(id: string): Promise<void> {
+    await this.ready();
+    await StoreEventModel.findByIdAndDelete(id);
+  }
+
   async getMessages(query?: MessageQuery): Promise<ArchivedMessage[]> {
     await this.ready();
     const filter = query?.publicationStatus
@@ -201,6 +239,11 @@ export class MongoRepository implements StoreRepository {
     return this.toMessage(doc.toObject());
   }
 
+  async removeMessage(id: string): Promise<void> {
+    await this.ready();
+    await ArchivedMessageModel.findByIdAndDelete(id);
+  }
+
   private toMessage(value: Record<string, unknown>): ArchivedMessage {
     return {
       id: String(value._id ?? value.id ?? randomUUID()),
@@ -208,12 +251,18 @@ export class MongoRepository implements StoreRepository {
       sourceMessageId: String(value.sourceMessageId),
       senderName: String(value.senderName),
       isFromStaff: Boolean(value.isFromStaff),
-      body: String(value.body),
+      body: String(value.body ?? ""),
+      photos: Array.isArray(value.photos) ? value.photos.map(String) : [],
       sentAt: String(value.sentAt),
       receivedAt: String(value.receivedAt),
+      editedAt: value.editedAt ? String(value.editedAt) : undefined,
       publicationStatus: value.publicationStatus as ArchivedMessage["publicationStatus"],
       messageKind: value.messageKind as ArchivedMessage["messageKind"],
       extracted: value.extracted as ArchivedMessage["extracted"],
     };
   }
+}
+
+function isMongoId(id?: string): boolean {
+  return Boolean(id && mongoose.isValidObjectId(id) && String(new mongoose.Types.ObjectId(id)) === id);
 }

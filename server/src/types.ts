@@ -86,8 +86,10 @@ export type ArchivedMessage = {
   senderName: string;
   isFromStaff: boolean;
   body: string;
+  photos?: string[];
   sentAt: string;
   receivedAt: string;
+  editedAt?: string;
   publicationStatus: PublicationStatus;
   messageKind: MessageKind;
   extracted?: ExtractedMessageData;
@@ -150,8 +152,10 @@ export type IngestMessageInput = {
   senderName: string;
   isFromStaff?: boolean;
   body: string;
+  photos?: string[];
   sentAt?: string;
   publicationStatus?: PublicationStatus;
+  apply?: boolean;
 };
 
 export type StoreData = {

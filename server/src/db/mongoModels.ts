@@ -64,9 +64,11 @@ export const ArchivedMessageModel = mongoose.model(
     sourceMessageId: { type: String, required: true },
     senderName: { type: String, required: true },
     isFromStaff: { type: Boolean, default: false },
-    body: { type: String, required: true },
+    body: { type: String, default: "" },
+    photos: { type: [String], default: [] },
     sentAt: { type: String, required: true },
     receivedAt: { type: String, required: true },
+    editedAt: String,
     publicationStatus: { type: String, default: "pending" },
     messageKind: { type: String, default: "general" },
     extracted: Schema.Types.Mixed,
@@ -74,3 +76,33 @@ export const ArchivedMessageModel = mongoose.model(
 );
 
 ArchivedMessageModel.schema.index({ source: 1, sourceMessageId: 1 }, { unique: true });
+
+export const AdminEmailModel = mongoose.model(
+  "AdminEmail",
+  new Schema({
+    email: { type: String, required: true, unique: true },
+    role: { type: String, default: "admin" },
+    createdAt: { type: String, required: true },
+  }, { collection: "AdminEmails" }),
+);
+
+export const AdminOtpModel = mongoose.model(
+  "AdminOtp",
+  new Schema({
+    email: { type: String, required: true },
+    codeHash: { type: String, required: true },
+    expiresAt: { type: String, required: true },
+    attempts: { type: Number, default: 0 },
+    createdAt: { type: String, required: true },
+  }, { collection: "AdminOtps" }),
+);
+
+export const AdminSessionModel = mongoose.model(
+  "AdminSession",
+  new Schema({
+    tokenHash: { type: String, required: true, unique: true },
+    email: { type: String, required: true },
+    expiresAt: { type: String, required: true },
+    createdAt: { type: String, required: true },
+  }, { collection: "AdminSessions" }),
+);

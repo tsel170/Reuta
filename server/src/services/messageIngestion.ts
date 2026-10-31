@@ -1,15 +1,18 @@
 import { randomUUID } from "node:crypto";
 import type { StoreRepository } from "../db/repository.js";
-import { getZonedNow } from "../time.js";
+import { datesInclusive, getZonedNow } from "../time.js";
 import type {
   ArchivedMessage,
-  DailyScheduleOverride,
   ExtractedMessageData,
   IngestMessageInput,
   MessageKind,
   StoreEvent,
+  StoreEventType,
+  TimeWindow,
 } from "../types.js";
+import { AdminHttpError, assertDate, cleanWindows } from "./adminSchedule.js";
 import { parseStoreMessage } from "./messageParser.js";
+import { sanitizeMessagePhotos } from "./messagePhotos.js";
 
 const isValidWhatsAppInvite = (url?: string) =>
   Boolean(url && /^https:\/\/(chat\.whatsapp\.com|wa\.me)\//i.test(url));
@@ -34,13 +37,20 @@ export class MessageIngestionService {
       return { message: existing, duplicate: true };
     }
 
-    const parsed = parseStoreMessage(input.body, { todayDate: zoned.date });
+    const photos = sanitizeMessagePhotos(input.photos);
+    const body = input.body?.trim() ?? "";
+    if (!body && !photos.length) {
+      throw new AdminHttpError("יש להזין טקסט או לצרף תמונה");
+    }
+
+    const parsed = parseStoreMessage(body, { todayDate: zoned.date });
     const extracted: ExtractedMessageData = {
       ...parsed,
       applied: false,
     };
 
-    const shouldAutoApply = parsed.confidence === "high" && parsed.dates.length > 0;
+    const shouldAutoApply =
+      input.apply !== false && parsed.confidence === "high" && parsed.dates.length > 0;
     let publicationStatus = input.publicationStatus;
     if (!publicationStatus) {
       publicationStatus =
@@ -73,7 +83,8 @@ export class MessageIngestionService {
       sourceMessageId,
       senderName: input.senderName,
       isFromStaff: input.isFromStaff ?? true,
-      body: input.body,
+      body,
+      photos,
       sentAt: input.sentAt ?? now.toISOString(),
       receivedAt: now.toISOString(),
       publicationStatus,
@@ -82,6 +93,141 @@ export class MessageIngestionService {
     });
 
     return { message, duplicate: false };
+  }
+
+  async update(
+    id: string,
+    input: { body: string; photos?: string[] },
+    now = new Date(),
+  ): Promise<ArchivedMessage> {
+    const current = (await this.repository.getMessages()).find((message) => message.id === id);
+    if (!current) throw new AdminHttpError("ההודעה לא נמצאה", 404);
+
+    const photos = sanitizeMessagePhotos(input.photos);
+    const body = input.body?.trim() ?? "";
+    if (!body && !photos.length) {
+      throw new AdminHttpError("יש להזין טקסט או לצרף תמונה");
+    }
+
+    await this.revertBySource(current.sourceMessageId);
+
+    const settings = await this.repository.getSettings();
+    const zoned = getZonedNow(settings.timezone || "Asia/Jerusalem", now);
+    const parsed = parseStoreMessage(body, { todayDate: zoned.date });
+    const extracted: ExtractedMessageData = {
+      ...parsed,
+      applied: false,
+    };
+
+    const messageKind: MessageKind =
+      parsed.kind === "event" ? "event" : parsed.kind === "unclear" ? "unclear" : "hours";
+
+    return this.repository.updateMessage(id, {
+      body,
+      photos,
+      editedAt: now.toISOString(),
+      publicationStatus: "approved",
+      messageKind,
+      extracted,
+    });
+  }
+
+  async applyReviewed(
+    id: string,
+    input: {
+      hours?: {
+        startDate: string;
+        endDate?: string;
+        isClosed: boolean;
+        windows?: TimeWindow[];
+        reason?: string;
+      } | null;
+      event?: {
+        title: string;
+        description?: string;
+        type: StoreEventType;
+        startDate: string;
+        endDate?: string;
+      } | null;
+    },
+  ): Promise<ArchivedMessage> {
+    const current = (await this.repository.getMessages()).find((message) => message.id === id);
+    if (!current) throw new AdminHttpError("ההודעה לא נמצאה", 404);
+
+    await this.revertBySource(current.sourceMessageId);
+
+    const extracted: ExtractedMessageData = {
+      ...(current.extracted ?? {
+        confidence: "medium",
+        kind: "unclear",
+        dates: [],
+        notes: [],
+      }),
+      applied: false,
+    };
+
+    if (input.hours) {
+      const startDate = assertDate(input.hours.startDate, "תאריך השעות");
+      const endDate = input.hours.endDate ? assertDate(input.hours.endDate, "תאריך סיום השעות") : startDate;
+      if (endDate < startDate) throw new AdminHttpError("תאריך הסיום אינו יכול להיות לפני תאריך ההתחלה");
+      const isClosed = Boolean(input.hours.isClosed);
+      const windows = isClosed ? [] : cleanWindows(input.hours.windows, true);
+      for (const date of datesInclusive(startDate, endDate)) {
+        await this.repository.upsertOverride({
+          id: randomUUID(),
+          startDate: date,
+          endDate: date,
+          isClosed,
+          windows,
+          reason: input.hours.reason?.trim() || (isClosed ? "סגירה לפי הודעה" : "שינוי שעות לפי הודעה"),
+          sourceMessageId: current.sourceMessageId,
+        });
+      }
+      extracted.kind = "temporary_hours";
+      extracted.dates = datesInclusive(startDate, endDate);
+      extracted.isClosed = isClosed;
+      extracted.windows = windows;
+      extracted.applied = true;
+    }
+
+    if (input.event) {
+      const title = input.event.title?.trim();
+      if (!title) throw new AdminHttpError("יש להזין כותרת לאירוע");
+      const startDate = assertDate(input.event.startDate, "תאריך האירוע");
+      const endDate = input.event.endDate ? assertDate(input.event.endDate, "תאריך סיום האירוע") : startDate;
+      if (endDate < startDate) throw new AdminHttpError("תאריך הסיום אינו יכול להיות לפני תאריך ההתחלה");
+      await this.repository.addEvent({
+        id: randomUUID(),
+        title,
+        description: input.event.description?.trim() || current.body,
+        type: input.event.type,
+        importance: "normal",
+        startDate,
+        endDate,
+        sourceMessageId: current.sourceMessageId,
+      });
+      extracted.kind = input.hours ? extracted.kind : "event";
+      extracted.eventTitle = title;
+      extracted.eventType = input.event.type;
+      if (!extracted.dates.length) extracted.dates = [startDate];
+      extracted.applied = true;
+    }
+
+    if (!input.hours && !input.event) {
+      extracted.applied = false;
+      extracted.blockedReason = "נשמרה ההודעה בלי שינוי בלוח";
+    } else {
+      extracted.blockedReason = undefined;
+    }
+
+    return this.repository.updateMessage(id, { extracted });
+  }
+
+  async remove(id: string): Promise<void> {
+    const current = (await this.repository.getMessages()).find((message) => message.id === id);
+    if (!current) throw new AdminHttpError("ההודעה לא נמצאה", 404);
+    await this.revertBySource(current.sourceMessageId);
+    await this.repository.removeMessage(id);
   }
 
   async ingestWebhook(payload: Record<string, unknown>): Promise<{ accepted: true; note: string }> {
@@ -115,6 +261,21 @@ export class MessageIngestionService {
 
   static validateInviteUrl(url?: string): boolean {
     return isValidWhatsAppInvite(url);
+  }
+
+  private async revertBySource(sourceMessageId: string): Promise<void> {
+    const [overrides, events] = await Promise.all([
+      this.repository.getOverrides(),
+      this.repository.getEvents(),
+    ]);
+    await Promise.all([
+      ...overrides
+        .filter((item) => item.sourceMessageId === sourceMessageId)
+        .map((item) => this.repository.removeOverride(item.id)),
+      ...events
+        .filter((item) => item.sourceMessageId === sourceMessageId)
+        .map((item) => this.repository.removeEvent(item.id)),
+    ]);
   }
 
   private async applyParsedUpdate(

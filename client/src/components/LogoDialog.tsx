@@ -23,7 +23,7 @@ export function LogoDialog({ src, alt, onClose }: Props) {
             <h2 id="logo-dialog-title">רעותה · בגדים באהבה</h2>
             <button
               ref={closeRef}
-              className="icon-button"
+              className="icon-button is-close"
               type="button"
               onClick={close}
               aria-label="סגירת החלונית"

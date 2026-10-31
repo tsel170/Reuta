@@ -25,8 +25,11 @@ export interface StoreRepository {
   removeOverride(id: string): Promise<void>;
   getEvents(): Promise<StoreEvent[]>;
   addEvent(event: StoreEvent): Promise<StoreEvent>;
+  updateEvent(id: string, patch: Partial<StoreEvent>): Promise<StoreEvent>;
+  removeEvent(id: string): Promise<void>;
   getMessages(query?: MessageQuery): Promise<ArchivedMessage[]>;
   findMessageBySource(source: string, sourceMessageId: string): Promise<ArchivedMessage | null>;
   insertMessage(message: ArchivedMessage): Promise<ArchivedMessage>;
   updateMessage(id: string, patch: Partial<ArchivedMessage>): Promise<ArchivedMessage>;
+  removeMessage(id: string): Promise<void>;
 }

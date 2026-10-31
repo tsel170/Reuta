@@ -66,6 +66,14 @@ export class MemoryRepository implements StoreRepository {
     this.data.events.push(event);
     return event;
   }
+  async updateEvent(id: string, patch: Partial<StoreEvent>): Promise<StoreEvent> {
+    const index = this.data.events.findIndex((event) => event.id === id);
+    this.data.events[index] = { ...this.data.events[index], ...patch, id };
+    return this.data.events[index];
+  }
+  async removeEvent(id: string): Promise<void> {
+    this.data.events = this.data.events.filter((event) => event.id !== id);
+  }
   async getMessages(): Promise<ArchivedMessage[]> {
     return this.data.messages;
   }
@@ -84,6 +92,9 @@ export class MemoryRepository implements StoreRepository {
     const index = this.data.messages.findIndex((message) => message.id === id);
     this.data.messages[index] = { ...this.data.messages[index], ...patch, id };
     return this.data.messages[index];
+  }
+  async removeMessage(id: string): Promise<void> {
+    this.data.messages = this.data.messages.filter((message) => message.id !== id);
   }
 }
 
