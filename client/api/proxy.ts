@@ -60,11 +60,18 @@ export async function handleApi(request: Request): Promise<Response> {
     const upstream = await fetch(target, init);
     const responseHeaders = new Headers();
     upstream.headers.forEach((value, key) => {
-      if (key.toLowerCase() === "transfer-encoding") return;
+      const name = key.toLowerCase();
+      if (
+        name === "transfer-encoding" ||
+        name === "content-encoding" ||
+        name === "content-length"
+      ) {
+        return;
+      }
       responseHeaders.append(key, value);
     });
 
-    return new Response(upstream.body, {
+    return new Response(await upstream.arrayBuffer(), {
       status: upstream.status,
       headers: responseHeaders,
     });

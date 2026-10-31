@@ -13,7 +13,9 @@ export async function sendOtpEmail(to: string, code: string): Promise<void> {
   const transporter = nodemailer.createTransport(
     isGmail
       ? {
-          service: "gmail",
+          host: "smtp.gmail.com",
+          port: 465,
+          secure: true,
           auth: { user: config.smtpUser, pass: config.smtpPass },
           connectionTimeout: SMTP_TIMEOUT_MS,
           greetingTimeout: SMTP_TIMEOUT_MS,
@@ -42,7 +44,7 @@ export async function sendOtpEmail(to: string, code: string): Promise<void> {
   } catch (error) {
     console.error("SMTP send failed", error);
     const failure = new Error(
-      "לא ניתן לשלוח את קוד האימות למייל. ב-Render בדקו SMTP_USER, SMTP_PASS, ושימו SMTP_PORT=465.",
+      "לא ניתן לשלוח את קוד האימות למייל. ב-Render בדקו SMTP_USER ו-SMTP_PASS (סיסמת אפליקציה).",
     );
     (failure as { statusCode?: number }).statusCode = 502;
     throw failure;

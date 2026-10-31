@@ -59,8 +59,15 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
       ...(init?.headers ?? {}),
     }),
   });
-  const contentType = response.headers.get("content-type") ?? "";
-  const data = contentType.includes("application/json") ? await response.json() : {};
+  const raw = await response.text();
+  let data: unknown = {};
+  if (raw) {
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      data = {};
+    }
+  }
   if (!response.ok) {
     throw new Error((data as { error?: string }).error || "הפעולה נכשלה");
   }
