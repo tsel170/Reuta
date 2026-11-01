@@ -10,14 +10,12 @@ import { adminRouter } from "./routes/admin.js";
 import { adminAuthRouter } from "./routes/adminAuth.js";
 import { ingestRouter } from "./routes/ingest.js";
 import { publicRouter } from "./routes/public.js";
-import { seedInitialStore } from "./seed.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 async function main() {
   const repository = await getRepository();
   const adminStore = await getAdminStore();
-  await seedInitialStore();
   if (config.whatsappInviteUrl) {
     await repository.updateSettings({ whatsappInviteUrl: config.whatsappInviteUrl });
   }

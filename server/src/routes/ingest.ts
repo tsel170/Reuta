@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { config } from "../config.js";
 import type { StoreRepository } from "../db/repository.js";
-import { seedInitialStore } from "../seed.js";
 import { MessageIngestionService } from "../services/messageIngestion.js";
 import type { IngestMessageInput } from "../types.js";
 
@@ -45,15 +44,6 @@ export function ingestRouter(repository: StoreRepository): Router {
     try {
       const result = await ingestion.ingestWebhook(req.body ?? {});
       res.json(result);
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  router.post("/seed", async (_req, res, next) => {
-    try {
-      const data = await seedInitialStore(new Date(), { force: true });
-      res.json({ ok: true, isDemoData: data.settings.isDemoData });
     } catch (error) {
       next(error);
     }
