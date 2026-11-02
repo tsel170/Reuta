@@ -2,6 +2,7 @@ import { Router } from "express";
 import { config } from "../config.js";
 import { MessageIngestionService } from "../services/messageIngestion.js";
 import { getSchedule } from "../services/scheduleService.js";
+import { withStoreIdentity } from "../storeIdentity.js";
 import type { StoreRepository } from "../db/repository.js";
 
 function resolveWhatsAppUrl(stored?: string): string | null {
@@ -27,7 +28,7 @@ export function publicRouter(repository: StoreRepository): Router {
 
   router.get("/store", async (_req, res, next) => {
     try {
-      const settings = await repository.getSettings();
+      const settings = withStoreIdentity(await repository.getSettings());
       res.json({
         ...settings,
         whatsappInviteUrl: resolveWhatsAppUrl(settings.whatsappInviteUrl) ?? undefined,

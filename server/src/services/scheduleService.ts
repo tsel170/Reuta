@@ -1,4 +1,5 @@
 import type { StoreRepository } from "../db/repository.js";
+import { withStoreIdentity } from "../storeIdentity.js";
 import {
   addDays,
   dateInRange,
@@ -240,7 +241,8 @@ export async function getMonthSchedule(
     repository.getOverrides(),
     repository.getEvents(),
   ]);
-  const zoned = getZonedNow(settings.timezone || "Asia/Jerusalem", now);
+  const store = withStoreIdentity(settings);
+  const zoned = getZonedNow(store.timezone || "Asia/Jerusalem", now);
   const start = `${year}-${String(month).padStart(2, "0")}-01`;
   const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
   const days = Array.from({ length: daysInMonth }, (_, index) =>
@@ -249,7 +251,7 @@ export async function getMonthSchedule(
   return {
     month: `${year}-${String(month).padStart(2, "0")}`,
     generatedAt: zoned.iso,
-    store: settings,
+    store,
     days,
   };
 }
@@ -265,7 +267,8 @@ export async function getSchedule(
     repository.getEvents(),
   ]);
 
-  const zoned = getZonedNow(settings.timezone || "Asia/Jerusalem", now);
+  const store = withStoreIdentity(settings);
+  const zoned = getZonedNow(store.timezone || "Asia/Jerusalem", now);
   const today = resolveDay(zoned.date, regularHours, overrides, events, zoned.date);
   const week = Array.from({ length: 7 }, (_, index) =>
     resolveDay(addDays(zoned.date, index + 1), regularHours, overrides, events, zoned.date),
@@ -284,8 +287,8 @@ export async function getSchedule(
   return {
     isDemoData: settings.isDemoData,
     generatedAt: zoned.iso,
-    store: settings,
-    today: buildTodayView(today, zoned.minutes, nextOpen, settings.timezone || "Asia/Jerusalem"),
+    store,
+    today: buildTodayView(today, zoned.minutes, nextOpen, store.timezone || "Asia/Jerusalem"),
     week,
     notices,
   };

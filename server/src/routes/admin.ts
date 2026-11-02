@@ -10,6 +10,7 @@ import {
 } from "../services/adminSchedule.js";
 import { MessageIngestionService } from "../services/messageIngestion.js";
 import { getMonthSchedule, getSchedule } from "../services/scheduleService.js";
+import { withStoreIdentity } from "../storeIdentity.js";
 
 export function adminRouter(repository: StoreRepository, store: AdminStore): Router {
   const router = Router();
@@ -94,11 +95,11 @@ export function adminRouter(repository: StoreRepository, store: AdminStore): Rou
 
   router.post("/messages", async (req, res, next) => {
     try {
-      const settings = await repository.getSettings();
+      const settings = withStoreIdentity(await repository.getSettings());
       const ingestion = new MessageIngestionService(repository);
       const result = await ingestion.ingest({
         source: "manual",
-        senderName: String(req.body?.senderName ?? settings.name ?? "החנות"),
+        senderName: String(req.body?.senderName ?? settings.name),
         body: String(req.body?.body ?? ""),
         photos: req.body?.photos,
         isFromStaff: true,
