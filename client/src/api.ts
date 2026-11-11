@@ -145,17 +145,12 @@ export const adminApi = {
     }
     return null;
   },
-  requestOtp: (email: string) =>
-    requestJson<{ ok: true; message: string }>("/api/admin/auth/request-otp", {
-      method: "POST",
-      body: JSON.stringify({ email }),
-    }),
-  verifyOtp: async (email: string, code: string) => {
+  login: async (email: string) => {
     const result = await requestJson<{ ok: true; email: string; token: string }>(
-      "/api/admin/auth/verify-otp",
+      "/api/admin/auth/login",
       {
         method: "POST",
-        body: JSON.stringify({ email, code }),
+        body: JSON.stringify({ email }),
       },
     );
     persistClientToken(result.token);
